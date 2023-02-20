@@ -8,6 +8,9 @@ from scipy import stats
 from time import time
 
 
+# TODO: figure out why it inf loops on multiple detections per timestep
+# TODO: make sure padding is correct (or get rid of if unneccessary
+
 def two_tail_prob(z):
     return 2*(1-stats.norm.cdf(z))
 
