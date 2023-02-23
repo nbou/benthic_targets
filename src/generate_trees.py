@@ -182,7 +182,7 @@ def make_hypothesis_tree(detections, faunastep):
                     new_br_no_repeat = np.append(br, np.NaN)
                     new_branches.append(new_br_no_repeat)
 
-                    new_scores.append(scores[i] + 1 - scr)
+                    new_scores.append(scores[i] + (1 - scr))
 
             branches = new_branches
             scores = new_scores
@@ -193,11 +193,12 @@ if __name__ == "__main__":
     detections = pd.DataFrame()
 
     detections["id"] = [0, 1, 2]
-    detections["time"] = [0, 1,1]
+    detections["time"] = [0, 1,2]
     # detections["time_chunk"] = [0,1,1]
     detections["object_location"] = [0, 0.5, 2]
 
 
     branches, scores = make_hypothesis_tree(detections, 0.75)
+    print(branches)
 
     a=10
