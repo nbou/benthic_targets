@@ -223,8 +223,8 @@ if __name__ == "__main__":
         print(h, scores[i])
 
     fig, ax = plt.subplots()
-    ax.scatter([len(h) for h in hyps], scores)
-    fig.show()
+    ax.scatter([len(h) for h in hyps], scores) #[scores[i]/len(h) for i, h in enumerate(hyps)] )
+    plt.show()
 
     a=10
 
