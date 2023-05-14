@@ -46,7 +46,7 @@ def update_hyps_scores(det, hyps, scores, probz, bg_prob):
     return new_hyps, new_scores
 
 
-def generate_hypothesis_matrix(detections, faunastep):
+def generate_probability_matrix(detections, faunastep):
 
     n_dets = len(detections)
     dists = np.zeros((len(detections), len(detections)))
@@ -60,13 +60,29 @@ def generate_hypothesis_matrix(detections, faunastep):
     return two_tail_prob(z_stat)
 
 
+def generate_probability_matrix_2D(detections, faunastep):
+
+    n_dets = len(detections)
+    dists = np.zeros((len(detections), len(detections)))
+    Dtime = np.zeros((len(detections), len(detections)))
+    for i in range(n_dets):
+        for j in range(n_dets):
+            dists[i, j] = np.linalg.norm(np.array((detections.loc[i]["x"], detections.loc[i]["y"])) -
+                                         np.array((detections.loc[j]["x"], detections.loc[j]["y"])))
+            Dtime[i, j] = np.abs(detections.loc[i]["time"] - detections.loc[j]["time"])
+
+    z_stat = np.divide(dists, faunastep * Dtime)
+    return two_tail_prob(z_stat)
+
 def build_and_score_hypotheses(detections, faunastep, bg_prob):
-    probz = generate_hypothesis_matrix(detections, faunastep)
+    probz = generate_probability_matrix(detections, faunastep)
 
     # make hypotheses and scores for first timestep
     scores = []
     hyps = []
-    for i, row in detections[detections["time"] == 0].iterrows():
+
+    t0 = detections.time.unique()[0]
+    for i, row in detections[detections["time"] == t0].iterrows():
         hyps.append([[row["id"]]])
         scores.append(bg_prob)
 
@@ -80,18 +96,25 @@ def build_and_score_hypotheses(detections, faunastep, bg_prob):
     return hyps, scores
 
 
-def build_and_score_hypotheses_multi(detections, faunastep, bg_prob):
-    probz = generate_hypothesis_matrix(detections, faunastep)
+def build_and_score_hypotheses_multi(detections, faunastep, bg_prob, d2=False):
 
+    if d2:
+        probz = generate_probability_matrix_2D(detections, faunastep)
+    else:
+        probz = generate_probability_matrix(detections, faunastep)
     # make hypotheses and scores for first timestep
     scores = []
     hyps = []
-    for i, row in detections[detections["time"] == 0].iterrows():
+
+    t0 = detections.time.unique()[0]
+    for i, row in detections[detections["time"] == t0].iterrows():
         hyps.append([[row["id"]]])
         scores.append(bg_prob)
 
     # update hypotheses and scores for the subsequent timesteps
     for t in detections.time.unique()[1:]:
+        print("Processing detections from {}s, {} existing hypothesess".format(t, len(scores)))
+
         dets = detections[detections["time"]==t]
 
         if len(dets) == 1:

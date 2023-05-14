@@ -21,7 +21,7 @@ def move_fauna_2D_norm(faunaX, faunaY, speed_var):
     XY += np.random.normal(0, speed_var, size=np.shape(XY))
     return XY[:, 0], XY[:, 1]
 
-def make_detections(num_inds, speed_var, size, timesteps):
+def make_positions(num_inds, speed_var, size, timesteps):
     '''
     :param num_inds: number of individuals to simulate
     :param speed_var: variance of distribution of pos at t+1
@@ -100,7 +100,7 @@ def mow_the_lawn_2D(startx, starty, endx, endy, camstep, ysteps):
     pathX = [startx]
     pathY = [starty]
 
-    while y < endy:
+    while y < endy-camstep:
         # Take steps in +ve x dir
         while x < endx:
             # take step in +ve x direction
