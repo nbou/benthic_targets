@@ -225,3 +225,30 @@ def cam2D(footprint, camx, camy, faunax, faunay, faunastep):
         t += 1
 
     return detections
+
+
+def check_in_cam(tstep, cx, cy, fprint, dfin):
+    hfp = fprint / 2
+    cxt = cx[tstep]
+    cyt = cy[tstep]
+    return dfin[(dfin["x_{}".format(tstep)].between(cxt - hfp, cxt + hfp)) & (
+        dfin["y_{}".format(tstep)].between(cyt - hfp, cyt + hfp))][
+        ["individual", "x_{}".format(tstep), "y_{}".format(tstep)]]
+
+
+def get_in_camera_dets(df, camx, camy, footprint):
+    out = []
+
+    for i in range(len(camx)):
+        cdf = check_in_cam(i, camx, camy, footprint, df)
+        if len(cdf)!=0:
+            for ind, row in cdf.iterrows():
+                out.append(dict(time=i,
+                                individual=row["individual"],
+                                x=row["x_{}".format(i)],
+                                y=row["y_{}".format(i)],
+                                camera_x=camx[i],
+                                camera_y=camy[i]
+                                ))
+
+    return pd.DataFrame(out)
