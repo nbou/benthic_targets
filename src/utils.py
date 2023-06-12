@@ -23,6 +23,12 @@ def generate_probability_matrix(detections, faunastep):
     return two_tail_prob(z_stat)
 
 
+def generate_score_del_mat(detections, im_area, var):
+    n_dets = len(detections)
+    dists = np.zeros((len(detections), len(detections)))
+    Dtime = np.zeros((len(detections), len(detections)))
+
+
 def generate_probability_matrix_2D(detections, faunastep):
 
     n_dets = len(detections)

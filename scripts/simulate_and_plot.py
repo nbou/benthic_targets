@@ -40,11 +40,13 @@ class Simulate:
         self.detections = get_in_camera_dets(self.animals, self.camx, self.camy, conf.camera_footprint)
 
     def alg_from_dets(self):
+        self.detections["id"] = self.detections.index
         return build_and_score_hypotheses_multi(
             self.detections,
             self.Config.fauna_speed,
             self.Config.background_probability,
-            0.05
+            0.01,
+            max_hyps=20000
         )
 
     def plot_sim(self):
@@ -101,11 +103,13 @@ class Simulate:
 
 
 if __name__ == "__main__":
+    import numpy as np
+
     area = 10
-    n_fauna = 10
-    speed = 0.1
+    n_fauna = 5
+    speed = 0.01
     cam_footprint = 1
-    cam_step = 0.3
+    cam_step = 0.4
     cam_ystep = 2
 
     bg_prob = n_fauna / (area * area)
@@ -124,3 +128,8 @@ if __name__ == "__main__":
     fig.show()
 
     hyps, scores = sim.alg_from_dets()
+
+    maxh = hyps[np.argmax(scores)]
+    for h in maxh:
+        print(sim.detections[sim.detections["id"].isin(h)])
+    a =10

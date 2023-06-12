@@ -3,6 +3,34 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from src.utils import get_last_detection_id
+
+
+class track:
+    def __init__(self, root):
+        self.root = root
+    def update(self, node):
+        
+        
+
+class trackTrees:
+    def __init__(self, detections):
+        self.detections = detections
+
+    def get_first_timestep(self):
+        return self.detections.times.unique()[0]
+
+    def make_root_nodes(self):
+        t = self.get_first_timestep()
+        dets = self.detections[self.detections.time == 0]
+
+        for i, d in dets.iterrows():
+
+
+
+    def update_tree(self, tree, dets):
+        
+
+
 def update_hyps(det, hyps):
     new_hyps = []
 
