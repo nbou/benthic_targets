@@ -1,10 +1,3 @@
-'''
-TODO
- - Track scoring code
- - pruning code
- - abundance estimates
-'''
-
 import numpy as np
 from src.simulate import initial_positions
 
@@ -269,9 +262,52 @@ def gating(track, df, var, thresh):
         else:
             return "keep"
 
+def gate_score(track, df, var, thresh, cam_area, density):
+    # get the id of the current and previous detection in the track
+    this = track[-1]
+    #     print(this)
+    last = get_last(track)
 
+    # TODO: score for if this detection is a nan (i.e. missed detection) 0?
+    # TODO: score for if previous is a nan (i.e. new individual) try inds/area * cam area?
+    # if either this or the previous detections are nans then keep the track
+    if np.isnan(last):
+        gate="keep"
+        delt=0
+    elif np.isnan(this):
+        gate="keep"
+        delt = density * cam_area
 
+    else:
+        # get the xy position of the current and previous detection
+        thispos = df.loc[this][["x", "y"]].to_numpy()
+        lastpos = df.loc[last][["x", "y"]].to_numpy()
 
+        # get the time of the detections
+        thist = df.loc[this].time
+        lastt = df.loc[last].time
+
+        # calculate the elapsed time between the detections
+        dt = thist - lastt
+
+        # build the covariance matrix and calculate the malahanobis distance between detections
+        cov = np.array([[dt * var, 0], [0, dt * var]])
+        d2 = mahalanobis(lastpos, thispos, cov)
+        #         print("mahal = ", d2)
+        # if
+        if d2 > thresh:
+            gate="discard"
+            delt=None
+        else:
+            # TODO: calculate score delta and return this with the "keep"
+            gate="keep"
+            delt = score_del(cam_area, cov, d2)
+
+    return gate, delt
+
+def score_del(area, cov, mah):
+    delta = np.log(np.divide(area, 2*np.pi)) - 0.5*np.log(np.linalg.det(cov)) - 0.5*mah
+    return delta
 
 if __name__ == "__main__":
     ce = conceptExample()
