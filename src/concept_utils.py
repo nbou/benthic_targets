@@ -25,6 +25,7 @@ class conceptExample:
         self.cam_step = cam_step
         self.var = var
         self.thresh = thresh
+        self.density = self.n_inds/(self.survey_y*self.survey_x)
 
         self.starting_x, self.starting_y = self.make_starting()
         self.cam_x, self.cam_y = self.make_campath()
@@ -180,12 +181,33 @@ class conceptExample:
                 repeat_scen = hyp + [detection_id]
 
                 # do the gating
-                g = gating(repeat_scen, self.df, self.var, self.thresh)
-                if g == "keep":
+                gate = gating(repeat_scen, self.df, self.var, self.thresh)
+                if gate == "keep":
                     new_tracks.append(repeat_scen)
                 else:
                     print("Gated detection {} from {}".format(det.index[0], get_last(repeat_scen)))
         return new_tracks
+
+    def update_score_tracks(self, det, tracks, pmiss):
+        new_tracks = []
+        new_scores = []
+        for i, hyp in enumerate(tracks):
+            missed_scen = hyp + [np.nan]
+
+            new_tracks.append(missed_scen)
+            new_scores.append(pmiss)
+
+            for detection_id in det.index:
+                repeat_scen = hyp + [detection_id]
+
+                # do the gating
+                gate, score = gate_score(repeat_scen, self.df, self.var, self.thresh, *self.cam_area , self.density)
+
+                if gate == "keep":
+                    new_tracks.append(repeat_scen)
+                    new_scores.append(score)
+                else:
+                    print("Gated detection {} from {}".format(det.index[0], get_last(repeat_scen)))
 
 
 
