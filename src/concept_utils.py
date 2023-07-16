@@ -188,26 +188,29 @@ class conceptExample:
                     print("Gated detection {} from {}".format(det.index[0], get_last(repeat_scen)))
         return new_tracks
 
-    def update_score_tracks(self, det, tracks, pmiss):
+    def update_score_tracks(self, det, tracks, scores):
+        pmiss = self.density * np.multiply(*self.cam_area)
         new_tracks = []
         new_scores = []
         for i, hyp in enumerate(tracks):
+            old_score = scores[i]
             missed_scen = hyp + [np.nan]
 
             new_tracks.append(missed_scen)
-            new_scores.append(pmiss)
+            new_scores.append(pmiss + old_score)
 
             for detection_id in det.index:
                 repeat_scen = hyp + [detection_id]
 
                 # do the gating
-                gate, score = gate_score(repeat_scen, self.df, self.var, self.thresh, *self.cam_area , self.density)
+                gate, score = gate_score(repeat_scen, self.df, self.var, self.thresh, np.multiply(*self.cam_area) , self.density)
 
                 if gate == "keep":
                     new_tracks.append(repeat_scen)
-                    new_scores.append(score)
+                    new_scores.append(score+ old_score)
                 else:
                     print("Gated detection {} from {}".format(det.index[0], get_last(repeat_scen)))
+        return new_tracks, new_scores
 
 
 
