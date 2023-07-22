@@ -189,7 +189,7 @@ class conceptExample:
         return new_tracks
 
     def update_score_tracks(self, det, tracks, scores):
-        pmiss = self.density * np.multiply(*self.cam_area)
+        pmiss = 0.01#1 - self.density * np.multiply(*self.cam_area)
         new_tracks = []
         new_scores = []
         for i, hyp in enumerate(tracks):
@@ -197,26 +197,37 @@ class conceptExample:
             missed_scen = hyp + [np.nan]
 
             new_tracks.append(missed_scen)
-            new_scores.append(pmiss + old_score)
+            new_scores.append(np.log(1-pmiss) + old_score)
 
             for detection_id in det.index:
                 repeat_scen = hyp + [detection_id]
 
                 # do the gating
-                gate, score = gate_score(repeat_scen, self.df, self.var, self.thresh, np.multiply(*self.cam_area) , self.density)
+                gate, score = gate_score(repeat_scen, self.df, self.var, self.thresh, np.multiply(*self.cam_area) , self.density, pmiss)#pmiss)
 
                 if gate == "keep":
                     new_tracks.append(repeat_scen)
-                    new_scores.append(score+ old_score)
+                    new_scores.append(score + old_score)
                 else:
                     print("Gated detection {} from {}".format(det.index[0], get_last(repeat_scen)))
         return new_tracks, new_scores
 
-
+    def make_score_mat(self):
+        df = self.df.copy()
+        n_dets = len(df)
+        score_mat = np.zeros((n_dets, n_dets))
+        for i, row in df.iterrows():
+            for j, jrow in df.iterrows():
+                if i == j:
+                    score_mat[i, j] = track_init_score(ce.density, np.multiply(*self.cam_area))
+                else:
+                    score_mat[i,j] = score_between_dets(row, jrow, np.multiply(*self.cam_area), self.var)
+                        # track_init_score(self.density, np.multiply(*self.cam_area))
+        return score_mat
 
 
 def simulate2(starting, norm):
-    return [s + np.random.normal(0, norm, 2) for s in starting]
+    return [s + np.random.normal(0, np.sqrt(norm), 2) for s in starting]
 
 def simulate1(starting, norm):
     return [s + np.random.normal(0, norm) for s in starting]
@@ -288,7 +299,7 @@ def gating(track, df, var, thresh):
             return "keep"
 
 
-def gate_score(track, df, var, thresh, cam_area, density):
+def gate_score(track, df, var, thresh, cam_area, density, pmiss):
     # get the id of the current and previous detection in the track
     this = track[-1]
     #     print(this)
@@ -299,11 +310,12 @@ def gate_score(track, df, var, thresh, cam_area, density):
     # if either this or the previous detections are nans then keep the track
     if np.isnan(last):
         gate="keep"
-        delt=0
+        delt=np.log(1-pmiss)
+        print("insnan last")
     elif np.isnan(this):
         gate="keep"
-        delt = density * cam_area
-
+        delt = np.log(pmiss) #density * cam_area
+        print("isnan this")
     else:
         # get the xy position of the current and previous detection
         thispos = df.loc[this][["x", "y"]].to_numpy()
@@ -334,3 +346,41 @@ def gate_score(track, df, var, thresh, cam_area, density):
 def score_del(area, cov, mah):
     delta = np.log(np.divide(area, 2*np.pi)) - 0.5*np.log(np.linalg.det(cov)) - 0.5*mah
     return delta
+
+def score_between_dets(d0, d1, cam_area, var):
+    t0 = d0["time"]
+    t1 = d1["time"]
+    dt = t1 - t0
+
+    p0 = d0[["x", "y"]].to_numpy()
+    p1 = d1[["x", "y"]].to_numpy()
+
+    cov = np.array([[dt * var, 0], [0, dt * var]])
+    mah = mahalanobis(p0, p1, cov)
+    return score_del(cam_area, cov, mah)
+
+def step_tracks_scores(t, tracks, ce, scores):
+    det = ce.df[ce.df["time" ]==t]
+#     gate_score(t, ce.df, ce.var, ce.thresh, np.multiply(*ce.cam_area), 3/5)
+    return ce.update_score_tracks(det, tracks, scores)
+
+def track_init_score(density, cam_area, pmiss=0.01):
+    return np.log(1-pmiss) + np.log(density) + np.log(cam_area) - np.log(pmiss)
+
+
+
+
+if __name__ == "__main__":
+    ce = conceptExample(var=0.01)
+
+    # ce.plot_starting()
+    # ce.plot_cams()
+    # ce.plot_paths()
+    ce.plot_detections()
+
+    score_mat = ce.make_score_mat()
+    print(score_mat)
+    tracks = ce.make_first_track()
+    scores = [0, 0]
+
+    print(tracks, scores)
