@@ -189,7 +189,7 @@ class conceptExample:
         return new_tracks
 
     def update_score_tracks(self, det, tracks, scores):
-        pmiss = 0.01#1 - self.density * np.multiply(*self.cam_area)
+        pmiss = 0.1 #1 - self.density * np.multiply(*self.cam_area)
         new_tracks = []
         new_scores = []
         for i, hyp in enumerate(tracks):
@@ -227,7 +227,7 @@ class conceptExample:
 
 
 def simulate2(starting, norm):
-    return [s + np.random.normal(0, np.sqrt(norm), 2) for s in starting]
+    return [s + np.random.normal(0, norm, 2) for s in starting]
 
 def simulate1(starting, norm):
     return [s + np.random.normal(0, norm) for s in starting]
