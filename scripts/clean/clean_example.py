@@ -1,6 +1,7 @@
 import numpy as np
 from src.simulate import initial_positions
 from src.utils import get_last_detection_id
+from matplotlib.ticker import MaxNLocator
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
@@ -49,8 +50,8 @@ class conceptExample:
                  cam_area=[1,1],
                  cam_step=0.6,
                  var=0.1,
-                 thresh=0.3,
-                 pmiss=0.3
+                 thresh=0.5,
+                 # pmiss=1
                  ):
         self.survey_x = survey_x
         self.survey_y = survey_y
@@ -59,7 +60,7 @@ class conceptExample:
         self.cam_step = cam_step
         self.var = var
         self.thresh = thresh
-        self.pmiss = pmiss
+        self.pmiss = 1/(10*var)#pmiss
 
         self.density = self.n_inds/(self.survey_y*self.survey_x)
         self.bg_prob = self.density/np.multiply(*self.cam_area)
@@ -78,7 +79,7 @@ class conceptExample:
     def make_starting(self):
         area = [0, self.survey_x, 0, self.survey_y]
         starting_x, starting_y = initial_positions(self.n_inds, area)
-        # starting_x = [.8, 2., 4.]
+        starting_x = [.8, 2., 4.]
         return starting_x, starting_y
 
     def plot_starting(self):
@@ -94,7 +95,7 @@ class conceptExample:
         ax.axis('off')
 
         ax.add_patch(Rectangle((0, 0), self.survey_x, self.survey_y, fill=False))
-
+        fig.tight_layout()
         plt.show()
 
     def make_campath(self):
@@ -334,6 +335,18 @@ def first_track(dets):
     tracks = [[i] for i, row in det.iterrows()]
     return tracks
 
+def plot_hyp_scores(hyps,
+                    hscores):
+    hlen = [len(h) for h in hyps]
+    fig, ax = plt.subplots()
+    ax.scatter(hlen, hscores)
+    ax.set_xlabel("Predicted number of targets")
+    ax.set_ylabel("Hypothesis score")
+    ax.set_yticks([])
+
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    plt.show()
+
 if __name__ == "__main__":
     ce = conceptExample()
 
@@ -369,3 +382,5 @@ if __name__ == "__main__":
     print(detections)
     print([tracks[h] for h in hyps[d]])
     a=10
+
+    plot_hyp_scores(hyps, hscores)
