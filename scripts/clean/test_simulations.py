@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 
+import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from scipy.spatial.distance import mahalanobis
 
@@ -14,7 +15,7 @@ from contextlib import contextmanager
 class conceptExample2d:
     def __init__(self,
                  survey_x=5,
-                 survey_y=3,
+                 survey_y=5,
                  n_inds=3,
                  cam_area=[1,1],
                  cam_step=0.6,
@@ -163,7 +164,7 @@ def score_sim(hyps, hscores, tracks, detections, n_individuals=3):
         correct.append(detections[detections.individual==i].index.to_list())
 
     # find percentage of scores higher than the correct one
-    hs = min(hscores)
+    hs = np.nan #min(hscores)
     for i, hyp in enumerate(hyps):
         hypt = [trx[h] for h in hyp]
         if hypt == correct:
@@ -218,12 +219,12 @@ class SimConfig:
                  var=0.1,
                  cam_area= [1, 1],
                  n_inds = 3,
-                 density=3./15,
+                 density=3./25,
                  thresh=2
                  ):
         self.var = var
         self.thresh = thresh
-        self.pmiss = 1/(9*var)#pmiss
+        self.pmiss = 0.5#1/(20*var)#pmiss
         self.cam_area = cam_area
         self.n_inds=n_inds
         self.density = density #self.n_inds/(self.survey_y*self.survey_x)
@@ -266,7 +267,7 @@ def update_tracks(dets, all_dets, tracks, scores, conf:SimConfig):
     return new_tracks, new_scores
 
 
-def check_detections(df, target_num=3, maxlen=14):
+def check_detections(df, target_num=3, maxlen=9):
     out = True
     if len(df)>maxlen:
         out=False
@@ -331,14 +332,7 @@ def do_scoring(detections, conf:SimConfig):
     return [sp, ap]
 
 
-
-if __name__ == "__main__":
-    from tqdm import tqdm
-
-
-    cfg = SimConfig()
-
-    n_sims=10
+def score_sims(n_sims=50, vars=[0.05, 0.1, 0.15], densities=[2./25, 3./25, 4./25]):
     detlist = []
     while len(detlist) < n_sims:
 
@@ -347,24 +341,86 @@ if __name__ == "__main__":
         if check_detections(detections):
             detlist.append(ce.df)
 
+    var_outs = []
+    for v in vars:
+        cfg = SimConfig(var=v)
+        score_percs = []
+        abundance_props = []
+        for dtc in tqdm(detlist):
+            # print(len(dtc))
+            tracks, hyps, hscores = make_tracks_hyps(dtc, cfg)
+            sp, ap = score_sim(hyps, hscores, tracks, dtc, n_individuals=3)
+            score_percs.append(sp)
+            abundance_props.append(ap)
+        var_outs.append(dict(var=v, sp=score_percs, ap=abundance_props))
 
+    dens_outs = []
+    for d in densities:
+        cfg = SimConfig(density=d)
+        score_percs = []
+        abundance_props = []
+        for dtc in tqdm(detlist):
+            # print(len(dtc))
+            tracks, hyps, hscores = make_tracks_hyps(dtc, cfg)
+            sp, ap = score_sim(hyps, hscores, tracks, dtc, n_individuals=3)
+            score_percs.append(sp)
+            abundance_props.append(ap)
+        dens_outs.append(dict(density=d, sp=score_percs, ap=abundance_props))
 
-    with poolcontext(processes=10) as pool:
-        results = pool.map(partial(do_scoring,conf=cfg), detlist)
+    return var_outs, dens_outs
 
-    print(np.average(np.array(results)[:, 0]))
-    print(np.average(np.array(results)[:,1]))
+def plot_vouts(vo):
+    fig, ax = plt.subplots(1,2)
+    # h = plt.hist(vo[1]["sp"])
+    vz = np.transpose(np.vstack([v["sp"] for v in vo]))
+    ax[0].hist(vz, density=True, histtype='bar')
+    ax[0].set_ylabel('Frequency')
+    ax[0].set_xlabel('Prop. incorrect')
+    ax[0].legend([v["var"] for v in vo], title='Variance')
+    dz = np.transpose(np.vstack([v["ap"] for v in vo]))
+    ax[1].hist(dz, density=True, histtype='bar')
+    ax[1].set_xlabel('Prop. correct abundance')
+    plt.show()
 
+def plot_douts(do):
+    fig, ax = plt.subplots(1,2)
+    # h = plt.hist(vo[1]["sp"])
+    vz = np.transpose(np.vstack([v["sp"] for v in do]))
+    ax[0].hist(vz, density=True, histtype='bar')
+    ax[0].set_ylabel('Frequency')
+    ax[0].set_xlabel('Prop. incorrect')
+    # for i in range(len(vo)):
+    #     ax.hist(vo[i], bins=vbins)
+    ax[0].legend([v["density"] for v in do], title='Density')
+    dz = np.transpose(np.vstack([v["ap"] for v in do]))
+    ax[1].hist(dz, density=True, histtype='bar')
+    ax[1].set_xlabel('Prop. correct abundance')
+    plt.show()
+if __name__ == "__main__":
+    from tqdm import tqdm
+
+    vo, do = score_sims()
+    plot_vouts(vo)
+    plot_douts(do)
+
+    # n_sims=50
+    # detlist = []
+    # while len(detlist) < n_sims:
+    #
+    #     ce = conceptExample2d()
+    #     detections = ce.df
+    #     if check_detections(detections):
+    #         detlist.append(ce.df)
+    #
+    # cfg = SimConfig(var=0.1)
     # score_percs = []
     # abundance_props = []
     #
-    #
-    #
     # for dtc in tqdm(detlist):
-    #     print(len(dtc))
+    #     # print(len(dtc))
     #     tracks, hyps, hscores = make_tracks_hyps(dtc, cfg)
     #     sp, ap = score_sim(hyps, hscores, tracks, dtc, n_individuals=3)
     #     score_percs.append(sp)
     #     abundance_props.append(ap)
     #
-    # print(np.average(score_percs), np.average(abundance_props))
+    # print(np.nanmean(score_percs), np.average(abundance_props))
